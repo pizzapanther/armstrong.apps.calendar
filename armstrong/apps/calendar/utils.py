@@ -14,6 +14,18 @@ from armstrong.apps.related_content.models import RelatedContent
 
 from .models import Event
 
+def copy_inlines (obj, newobj):
+  #TODO: Make this more generic so it works on generic relations and normal inlines
+  #Right now only works for related content
+  
+  obj_type = ContentType.objects.get_for_model(obj)
+  
+  RelatedContent.objects.filter(source_type=obj_type, source_id=newobj.id).delete()
+  for related in RelatedContent.objects.filter(source_type=obj_type, source_id=obj.id):
+    new_related = copy_model_instance(related)
+    new_related.source_id = newobj.id
+    new_related.save()
+    
 def copy_model_instance (obj):
   initial = {}
   for f in obj._meta.fields:

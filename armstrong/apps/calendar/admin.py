@@ -20,7 +20,7 @@ from reversion.admin import VersionAdmin
 from .models import Event
 from .widgets import UpdateDeleteSeries
 from .utils import copy_model_instance, copy_many_to_many, update_attrs, \
-  get_deleted_objects_no_series, get_deleted_objects_series
+  get_deleted_objects_no_series, get_deleted_objects_series, copy_inlines
 
 REPEAT_CHOICES = (
   ('none', _('None')),
@@ -177,7 +177,7 @@ class EventAdmin (SectionTreeAdminMixin, VersionAdmin, hatband.ModelAdmin):
       for updobj in obj.__class__.objects.filter(series=obj.series).exclude(id=obj.id):
         update_attrs(obj, updobj, ('start_dt', 'end_dt'))
         copy_many_to_many(obj, updobj)
-        self.copy_inlines(obj, updobj)
+        copy_inlines(obj, updobj)
         
   def save_new_series (self, request, obj, form):
     if form.cleaned_data.has_key('repeat') and form.cleaned_data['repeat'] != 'none':
@@ -238,23 +238,11 @@ class EventAdmin (SectionTreeAdminMixin, VersionAdmin, hatband.ModelAdmin):
               
             newobj.save()
             copy_many_to_many(obj, newobj)
-            self.copy_inlines(obj, newobj)
+            copy_inlines(obj, newobj)
             
           else:
             break
           
-  def copy_inlines (self, obj, newobj):
-    #TODO: Make this more generic so it works on generic relations and normal inlines
-    #Right now only works for related content
-    
-    obj_type = ContentType.objects.get_for_model(obj)
-    
-    RelatedContent.objects.filter(source_type=obj_type, source_id=newobj.id).delete()
-    for related in RelatedContent.objects.filter(source_type=obj_type, source_id=obj.id):
-      new_related = copy_model_instance(related)
-      new_related.source_id = newobj.id
-      new_related.save()
-      
   def get_fieldsets (self, request, obj=None):
     if obj is None:
       return self.fieldsets_add
